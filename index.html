@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>BlockVerse — Sandbox Online</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ===== VARIABLES & RESET ===== */
+:root {
+  --primary: #FF4757;
+  --secondary: #2ED573;
+  --accent: #FFA502;
+  --blue: #1E90FF;
+  --purple: #A55EEA;
+  --dark: #0D0D1A;
+  --dark2: #161628;
+  --dark3: #1E1E35;
+  --dark4: #252545;
+  --text: #E8E8FF;
+  --text2: #9999BB;
+  --coin: #FFD700;
+  --card: rgba(255,255,255,0.05);
+  --border: rgba(255,255,255,0.1);
+  --radius: 16px;
+  --shadow: 0 8px 32px rgba(0,0,0,0.4);
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { width:100%; height:100%; overflow:hidden; background:var(--dark); font-family:'Nunito',sans-serif; color:var(--text); }
+
+/* ===== SCREENS ===== */
+.screen { position:fixed; inset:0; display:none; flex-direction:column; align-items:center; justify-content:center; z-index:10; }
+.screen.active { display:flex; }
+
+/* ===== SCROLLBAR ===== */
+::-webkit-scrollbar { width:6px; }
+::-webkit-scrollbar-track { background:var(--dark2); }
+::-webkit-scrollbar-thumb { background:var(--dark4); border-radius:3px; }
+
+/* ===== BACKGROUND ANIMATED ===== */
+.bg-anim {
+  position:fixed; inset:0; z-index:0;
+  background: radial-gradient(ellipse at 20% 50%, rgba(255,71,87,0.15) 0%, transparent 60%),
+              radial-gradient(ellipse at 80% 20%, rgba(46,213,115,0.1) 0%, transparent 50%),
+              radial-gradient(ellipse at 60% 80%, rgba(165,94,234,0.1) 0%, transparent 50%),
+              var(--dark);
+}
+.bg-anim::before {
+  content:'';
+  position:absolute; inset:0;
+  background-image: repeating-linear-gradient(0deg, transparent, transparent 40px, rgba(255,255,255,0.02) 40px, rgba(255,255,255,0.02) 41px),
+                    repeating-linear-gradient(90deg, transparent, transparent 40px, rgba(255,255,255,0.02) 40px, rgba(255,255,255,0.02) 41px);
+}
+
+/* ===== AUTH SCREEN ===== */
+#authScreen { background:none; }
+.auth-container {
+  position:relative; z-index:1;
+  width:min(420px, 94vw);
+  background:var(--dark2);
+  border:1px solid var(--border);
+  border-radius:24px;
+  padding:40px 36px;
+  box-shadow: var(--shadow), 0 0 80px rgba(255,71,87,0.1);
+}
+.logo {
+  text-align:center; margin-bottom:32px;
+}
+.logo h1 {
+  font-family:'Fredoka One',cursive;
+  font-size:42px;
+  background: linear-gradient(135deg, #FF4757, #FFA502, #2ED573);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+  letter-spacing:2px;
+}
+.logo p { color:var(--text2); font-size:13px; margin-top:4px; }
+.auth-tabs {
+  display:flex; gap:8px; margin-bottom:28px;
+  background:var(--dark3); border-radius:12px; padding:4px;
+}
+.auth-tab {
+  flex:1; padding:10px; border:none; background:none; color:var(--text2);
+  border-radius:10px; cursor:pointer; font-family:'Nunito',sans-serif;
+  font-weight:700; font-size:14px; transition:all 0.2s;
+}
+.auth-tab.active { background:var(--primary); color:#fff; }
+.form-group { margin-bottom:16px; }
+.form-group label { display:block; font-size:12px; font-weight:700; color:var(--text2); margin-bottom:6px; text-transform:uppercase; letter-spacing:0.5px; }
+.form-group input {
+  width:100%; padding:13px 16px;
+  background:var(--dark3); border:1px solid var(--border);
+  border-radius:12px; color:var(--text); font-family:'Nunito',sans-serif;
+  font-size:15px; transition:all 0.2s; outline:none;
+}
+.form-group input:focus { border-color:var(--primary); background:var(--dark4); }
+.btn {
+  width:100%; padding:14px; border:none; border-radius:12px;
+  font-family:'Nunito',sans-serif; font-weight:800; font-size:16px;
+  cursor:pointer; transition:all 0.2s; position:relative; overflow:hidden;
+}
+.btn-primary { background:linear-gradient(135deg, var(--primary), #FF6B7A); color:#fff; }
+.btn-primary:hover { transform:translateY(-2px); box-shadow:0 6px 20px rgba(255,71,87,0.4); }
+.btn-primary:active { transform:translateY(0); }
+.auth-msg { text-align:center; margin-top:12px; font-size:13px; color:var(--text2); min-height:20px; }
+.auth-msg.error { color:var(--primary); }
+.auth-msg.success { color:var(--secondary); }
+.floating-blocks {
+  position:fixed; inset:0; z-index:0; pointer-events:none; overflow:hidden;
+}
+.float-block {
+  position:absolute;
+  border-radius:6px;
+  animation: floatUp 8s infinite linear;
+  opacity:0.15;
+}
+@keyframes floatUp {
+  0% { transform:translateY(110vh) rotate(0deg); opacity:0; }
+  10% { opacity:0.15; }
+  90% { opacity:0.15; }
+  100% { transform:translateY(-10vh) rotate(360deg); opacity:0; }
+}
+
+/* ===== LOBBY SCREEN ===== */
+#lobbyScreen {
+  background:none;
+  flex-direction:column;
+  justify-content:flex-start;
+  align-items:stretch;
+  overflow:hidden;
+}
+/* ===== TOP NAV ===== */
+.top-nav {
+  position:relative; z-index:2;
+  display:flex; align-items:center; gap:12px;
+  padding:12px 20px;
+  background:rgba(13,13,26,0.9);
+  backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.nav-logo {
+  font-family:'Fredoka One',cursive;
+  font-size:22px;
+  background:linear-gradient(135deg, #FF4757, #FFA502);
+  -webkit-background-clip:text; -webkit-text-fill-color:transparent;
+}
+.nav-spacer { flex:1; }
+.coin-display {
+  display:flex; align-items:center; gap:6px;
+  background:var(--dark3); border:1px solid rgba(255,215,0,0.3);
+  border-radius:20px; padding:6px 14px;
+  font-weight:800; font-size:15px; color:var(--coin);
+}
+.coin-display::before { content:'🪙'; font-size:16px; }
+.nav-btn {
+  width:38px; height:38px; border:none;
+  background:var(--dark3); border-radius:10px;
+  color:var(--text); font-size:18px; cursor:pointer;
+  transition:all 0.2s; display:flex; align-items:center; justify-content:center;
+  border:1px solid var(--border);
+}
+.nav-btn:hover { background:var(--dark4); transform:scale(1.05); }
+.avatar-btn {
+  width:38px; height:38px; border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:18px; cursor:pointer; border:2px solid var(--primary);
+  overflow:hidden; background:var(--dark3); transition:all 0.2s;
+}
+.avatar-btn:hover { transform:scale(1.05); }
+
+/* ===== LOBBY CONTENT ===== */
+.lobby-content {
+  flex:1; overflow-y:auto; position:relative; z-index:1;
+  padding:20px;
+}
+.section-title {
+  font-family:'Fredoka One',cursive;
+  font-size:24px; margin-bottom:16px; color:var(--text);
+}
+.section-title span { color:var(--primary); }
+
+/* ===== GAME CARDS ===== */
+.games-grid {
+  display:grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap:16px; margin-bottom:32px;
+}
+.game-card {
+  background:var(--dark2);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  overflow:hidden; cursor:pointer;
+  transition:all 0.25s;
+  position:relative;
+}
+.game-card:hover { transform:translateY(-4px); border-color:var(--primary); box-shadow:0 12px 40px rgba(255,71,87,0.2); }
+.game-card-thumb {
+  height:140px; position:relative;
+  display:flex; align-items:center; justify-content:center;
+  font-size:60px; overflow:hidden;
+}
+.game-card-badge {
+  position:absolute; top:10px; right:10px;
+  background:var(--primary); color:#fff;
+  font-size:10px; font-weight:800; padding:3px 8px;
+  border-radius:20px; text-transform:uppercase;
+}
+.game-card-info { padding:14px 16px; }
+.game-card-info h3 { font-weight:800; font-size:16px; margin-bottom:4px; }
+.game-card-info p { color:var(--text2); font-size:13px; margin-bottom:10px; }
+.game-card-meta {
+  display:flex; gap:12px; align-items:center;
+}
+.game-meta-item { display:flex; align-items:center; gap:4px; font-size:12px; color:var(--text2); }
+.btn-play {
+  margin-left:auto; padding:6px 16px;
+  background:var(--primary); color:#fff; border:none;
+  border-radius:8px; font-family:'Nunito',sans-serif;
+  font-weight:800; font-size:13px; cursor:pointer;
+  transition:all 0.2s;
+}
+.btn-play:hover { background:#ff6b7a; }
+
+/* ===== BOTTOM NAV ===== */
+.bottom-nav {
+  position:relative; z-index:2;
+  display:flex; align-items:center;
+  background:rgba(13,13,26,0.95);
+  backdrop-filter:blur(20px);
+  border-top:1px solid var(--border);
+  flex-shrink:0;
+}
+.bottom-nav-btn {
+  flex:1; padding:10px 8px; border:none; background:none;
+  color:var(--text2); cursor:pointer;
+  transition:all 0.2s; display:flex;
+  flex-direction:column; align-items:center; gap:3px;
+  font-family:'Nunito',sans-serif;
+}
+.bottom-nav-btn .icon { font-size:22px; }
+.bottom-nav-btn .label { font-size:10px; font-weight:700; }
+.bottom-nav-btn.active { color:var(--primary); }
+.bottom-nav-btn.active .icon { transform:scale(1.15); }
+
+/* ===== PANELS (shop, friends, profile) ===== */
+.panel {
+  position:fixed; inset:0; z-index:20;
+  display:none; flex-direction:column;
+  background:var(--dark);
+}
+.panel.open { display:flex; }
+.panel-header {
+  display:flex; align-items:center; gap:12px;
+  padding:16px 20px;
+  background:var(--dark2);
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.panel-header h2 { font-family:'Fredoka One',cursive; font-size:22px; flex:1; }
+.panel-close {
+  width:36px; height:36px; border:none;
+  background:var(--dark3); border-radius:10px;
+  color:var(--text); font-size:20px; cursor:pointer;
+  display:flex; align-items:center; justify-content:center;
+}
+.panel-body { flex:1; overflow-y:auto; padding:20px; }
+
+/* ===== SHOP ===== */
+.shop-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
+.shop-item {
+  background:var(--dark2); border:2px solid var(--border);
+  border-radius:var(--radius); padding:16px 12px;
+  text-align:center; cursor:pointer; transition:all 0.2s;
+}
+.shop-item:hover { border-color:var(--accent); transform:translateY(-2px); }
+.shop-item.owned { border-color:var(--secondary); opacity:0.8; cursor:default; }
+.shop-item.equipped { border-color:var(--primary); background:rgba(255,71,87,0.1); }
+.shop-item-icon { font-size:40px; margin-bottom:8px; display:block; }
+.shop-item-name { font-weight:700; font-size:13px; margin-bottom:4px; }
+.shop-item-price { color:var(--coin); font-weight:800; font-size:14px; }
+.shop-item-price.free { color:var(--secondary); }
+.item-color-preview {
+  width:50px; height:50px; border-radius:10px;
+  margin:0 auto 8px; border:2px solid rgba(255,255,255,0.2);
+}
+
+/* ===== FRIENDS ===== */
+.friends-search {
+  display:flex; gap:10px; margin-bottom:20px;
+}
+.friends-search input {
+  flex:1; padding:12px 16px;
+  background:var(--dark2); border:1px solid var(--border);
+  border-radius:12px; color:var(--text);
+  font-family:'Nunito',sans-serif; font-size:14px; outline:none;
+}
+.friends-search input:focus { border-color:var(--blue); }
+.btn-small {
+  padding:10px 18px; border:none; border-radius:12px;
+  background:var(--blue); color:#fff;
+  font-family:'Nunito',sans-serif; font-weight:700; font-size:14px;
+  cursor:pointer; transition:all 0.2s; white-space:nowrap;
+}
+.friend-item {
+  display:flex; align-items:center; gap:12px;
+  padding:12px; background:var(--dark2);
+  border-radius:12px; margin-bottom:8px;
+  border:1px solid var(--border);
+}
+.friend-avatar {
+  width:44px; height:44px; border-radius:12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; flex-shrink:0;
+}
+.friend-info { flex:1; }
+.friend-info h4 { font-weight:700; font-size:15px; }
+.friend-info p { color:var(--text2); font-size:12px; }
+.friend-status {
+  width:10px; height:10px; border-radius:50%;
+  background:var(--text2);
+}
+.friend-status.online { background:var(--secondary); box-shadow:0 0 6px var(--secondary); }
+.btn-accept { padding:6px 14px; border:none; border-radius:8px; background:var(--secondary); color:#fff; font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; cursor:pointer; margin-right:6px; }
+.btn-reject { padding:6px 14px; border:none; border-radius:8px; background:var(--dark3); color:var(--text2); font-family:'Nunito',sans-serif; font-weight:700; font-size:12px; cursor:pointer; }
+.section-subtitle { font-weight:700; font-size:14px; color:var(--text2); margin:16px 0 10px; text-transform:uppercase; letter-spacing:0.5px; }
+
+/* ===== PROFILE ===== */
+.profile-hero {
+  background:linear-gradient(135deg, var(--dark3), var(--dark4));
+  border:1px solid var(--border); border-radius:20px;
+  padding:24px; text-align:center; margin-bottom:20px;
+}
+.profile-avatar-big {
+  width:80px; height:80px; border-radius:20px;
+  margin:0 auto 12px;
+  display:flex; align-items:center; justify-content:center;
+  font-size:42px; border:3px solid var(--primary);
+}
+.profile-name { font-family:'Fredoka One',cursive; font-size:26px; }
+.profile-stats {
+  display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-top:20px;
+}
+.stat-box {
+  background:var(--dark2); border-radius:12px; padding:14px;
+  text-align:center; border:1px solid var(--border);
+}
+.stat-box .val { font-family:'Fredoka One',cursive; font-size:24px; color:var(--primary); }
+.stat-box .lbl { font-size:11px; color:var(--text2); font-weight:700; }
+.btn-logout { background:var(--dark3); color:var(--text2); border:1px solid var(--border); margin-top:16px; }
+.btn-logout:hover { border-color:var(--primary); color:var(--primary); }
+
+/* ===== GAME SCREEN ===== */
+#gameScreen {
+  background:var(--dark); flex-direction:column;
+  justify-content:flex-start; align-items:stretch;
+}
+#gameCanvas { display:block; flex:1; width:100%; touch-action:none; }
+.game-hud {
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  display:flex; align-items:center; gap:10px;
+  padding:10px 16px;
+  background:rgba(0,0,0,0.6);
+  backdrop-filter:blur(10px);
+  pointer-events:none;
+}
+.hud-left { display:flex; align-items:center; gap:10px; flex:1; }
+.hud-gamename {
+  font-family:'Fredoka One',cursive; font-size:18px;
+  color:var(--text);
+}
+.hud-score { color:var(--coin); font-weight:800; font-size:16px; }
+.hud-right { display:flex; align-items:center; gap:8px; pointer-events:all; }
+.hud-btn {
+  padding:7px 14px; border:none; border-radius:8px;
+  background:rgba(255,255,255,0.15);
+  color:#fff; font-family:'Nunito',sans-serif;
+  font-weight:700; font-size:13px; cursor:pointer;
+  backdrop-filter:blur(10px); transition:all 0.2s;
+}
+.hud-btn:hover { background:rgba(255,255,255,0.25); }
+.hud-btn.red { background:rgba(255,71,87,0.5); }
+/* Health bar */
+.health-bar-wrap {
+  display:flex; align-items:center; gap:6px;
+}
+.health-bar-bg {
+  width:80px; height:10px; background:rgba(255,255,255,0.15);
+  border-radius:5px; overflow:hidden;
+}
+.health-bar-fill {
+  height:100%; background:linear-gradient(90deg, var(--secondary), #7BF1A8);
+  border-radius:5px; transition:width 0.3s;
+}
+
+/* ===== TOUCH CONTROLS ===== */
+#touchControls {
+  position:fixed; bottom:0; left:0; right:0; z-index:60;
+  pointer-events:none;
+  padding:16px;
+  display:flex; justify-content:space-between; align-items:flex-end;
+}
+/* Joystick */
+.joystick-zone {
+  pointer-events:all;
+  position:relative;
+  width:120px; height:120px;
+}
+.joystick-base {
+  position:absolute; inset:0;
+  background:rgba(255,255,255,0.08);
+  border:2px solid rgba(255,255,255,0.2);
+  border-radius:50%;
+}
+.joystick-thumb {
+  position:absolute;
+  width:50px; height:50px;
+  background:rgba(255,255,255,0.3);
+  border:2px solid rgba(255,255,255,0.5);
+  border-radius:50%;
+  top:50%; left:50%;
+  transform:translate(-50%,-50%);
+  transition:transform 0.05s;
+  pointer-events:none;
+}
+/* Action buttons */
+.action-btns {
+  pointer-events:all;
+  display:flex; flex-direction:column; align-items:flex-end; gap:10px;
+}
+.action-btn {
+  width:60px; height:60px;
+  border:none; border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-size:22px; cursor:pointer; font-weight:800;
+  font-family:'Nunito',sans-serif;
+  transition:all 0.1s; user-select:none;
+  box-shadow:0 4px 12px rgba(0,0,0,0.4);
+}
+.action-btn:active { transform:scale(0.9); }
+.btn-jump { background:linear-gradient(135deg, var(--blue), #74b9ff); color:#fff; }
+.btn-interact { background:linear-gradient(135deg, var(--secondary), #7BF1A8); color:#fff; }
+
+/* ===== CHAT OVERLAY ===== */
+#chatPanel {
+  position:fixed; bottom:0; right:0; z-index:70;
+  width:min(320px, 90vw);
+  background:rgba(13,13,26,0.95);
+  backdrop-filter:blur(20px);
+  border:1px solid var(--border);
+  border-radius:16px 16px 0 0;
+  display:none; flex-direction:column;
+  max-height:60vh;
+}
+#chatPanel.open { display:flex; }
+.chat-header {
+  padding:12px 16px;
+  display:flex; align-items:center; justify-content:space-between;
+  border-bottom:1px solid var(--border);
+}
+.chat-header span { font-weight:700; }
+.chat-close { background:none; border:none; color:var(--text2); font-size:18px; cursor:pointer; }
+.chat-messages {
+  flex:1; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:6px;
+  min-height:150px;
+}
+.chat-msg { display:flex; gap:8px; align-items:flex-start; }
+.chat-msg-name { font-weight:700; font-size:12px; color:var(--accent); flex-shrink:0; }
+.chat-msg-text { font-size:13px; color:var(--text); word-break:break-word; }
+.chat-input-row {
+  display:flex; gap:8px; padding:10px;
+  border-top:1px solid var(--border);
+}
+.chat-input-row input {
+  flex:1; padding:8px 12px;
+  background:var(--dark3); border:1px solid var(--border);
+  border-radius:8px; color:var(--text);
+  font-family:'Nunito',sans-serif; font-size:13px; outline:none;
+}
+.chat-send {
+  padding:8px 12px; border:none; border-radius:8px;
+  background:var(--primary); color:#fff;
+  font-family:'Nunito',sans-serif; font-weight:700; cursor:pointer;
+}
+
+/* ===== GAME SELECTOR SCENE TRANSITION ===== */
+.scene-transition {
+  position:fixed; inset:0; z-index:100;
+  background:var(--dark);
+  display:flex; align-items:center; justify-content:center;
+  flex-direction:column; gap:16px;
+  pointer-events:none; opacity:0; transition:opacity 0.3s;
+}
+.scene-transition.show { opacity:1; pointer-events:all; }
+.loading-text { font-family:'Fredoka One',cursive; font-size:28px; }
+.loading-bar-bg { width:200px; height:6px; background:var(--dark3); border-radius:3px; overflow:hidden; }
+.loading-bar-fill { height:100%; background:var(--primary); width:0%; transition:width 2s ease; border-radius:3px; }
+
+/* ===== NOTIFICATIONS ===== */
+.toast {
+  position:fixed; top:70px; left:50%; transform:translateX(-50%) translateY(-20px);
+  background:var(--dark2); border:1px solid var(--border);
+  border-radius:12px; padding:12px 20px;
+  font-weight:700; font-size:14px;
+  z-index:200; opacity:0; transition:all 0.3s;
+  pointer-events:none; white-space:nowrap;
+}
+.toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+.toast.success { border-color:var(--secondary); color:var(--secondary); }
+.toast.error { border-color:var(--primary); color:var(--primary); }
+.toast.info { border-color:var(--blue); color:var(--blue); }
+
+/* ===== MINIGAME OVERLAYS ===== */
+.mg-overlay {
+  position:fixed; inset:0; z-index:55;
+  pointer-events:none;
+  display:flex; flex-direction:column;
+}
+.mg-timer {
+  position:absolute; top:70px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.7); border-radius:12px;
+  padding:8px 20px; font-family:'Fredoka One',cursive;
+  font-size:28px; color:var(--accent);
+  backdrop-filter:blur(10px);
+}
+.mg-objective {
+  position:absolute; top:120px; left:50%; transform:translateX(-50%);
+  background:rgba(0,0,0,0.6); border-radius:10px;
+  padding:6px 16px; font-size:13px; color:var(--text2);
+  backdrop-filter:blur(10px); white-space:nowrap;
+}
+.mg-score-popup {
+  position:absolute; font-family:'Fredoka One',cursive;
+  font-size:32px; color:var(--coin);
+  animation:scoreFloat 1.5s ease forwards;
+  pointer-events:none;
+}
+@keyframes scoreFloat {
+  0% { opacity:1; transform:translateY(0) scale(1); }
+  100% { opacity:0; transform:translateY(-80px) scale(1.4); }
+}
+
+/* ===== GAME OVER MODAL ===== */
+.modal-overlay {
+  position:fixed; inset:0; z-index:150;
+  background:rgba(0,0,0,0.7); backdrop-filter:blur(10px);
+  display:none; align-items:center; justify-content:center;
+}
+.modal-overlay.open { display:flex; }
+.modal-box {
+  background:var(--dark2); border:1px solid var(--border);
+  border-radius:24px; padding:36px 32px;
+  text-align:center; width:min(340px, 90vw);
+  box-shadow:var(--shadow);
+}
+.modal-box h2 { font-family:'Fredoka One',cursive; font-size:32px; margin-bottom:8px; }
+.modal-box p { color:var(--text2); font-size:15px; margin-bottom:24px; }
+.modal-btns { display:flex; gap:12px; flex-direction:column; }
+.modal-btns .btn { font-size:15px; }
+.btn-secondary { background:var(--dark3); color:var(--text); border:1px solid var(--border); }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width:480px) {
+  .games-grid { grid-template-columns:1fr; }
+  .auth-container { padding:28px 20px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ANIMATED BACKGROUND -->
+<div class="bg-anim"></div>
+<div class="floating-blocks" id="floatingBlocks"></div>
+
+<!-- ==================== AUTH SCREEN ==================== -->
+<div class="screen active" id="authScreen">
+  <div class="auth-container">
+    <div class="logo">
+      <h1>BlockVerse</h1>
+      <p>El mundo sandbox más divertido 🎮</p>
+    </div>
+    <div class="auth-tabs">
+      <button class="auth-tab active" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+      <button class="auth-tab" onclick="switchAuthTab('register')">Registrarse</button>
+    </div>
+    <!-- Login -->
+    <div id="loginForm">
+      <div class="form-group">
+        <label>Nombre de usuario</label>
+        <input type="text" id="loginUser" placeholder="Ingresa tu usuario" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="loginPass" placeholder="Ingresa tu contraseña" autocomplete="current-password">
+      </div>
+      <button class="btn btn-primary" onclick="handleLogin()">🚀 Entrar al Juego</button>
+    </div>
+    <!-- Register -->
+    <div id="registerForm" style="display:none">
+      <div class="form-group">
+        <label>Nombre de usuario</label>
+        <input type="text" id="regUser" placeholder="Elige un nombre único" autocomplete="username">
+      </div>
+      <div class="form-group">
+        <label>Contraseña</label>
+        <input type="password" id="regPass" placeholder="Crea una contraseña" autocomplete="new-password">
+      </div>
+      <div class="form-group">
+        <label>Avatar</label>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;" id="avatarPicker">
+          <!-- populated by JS -->
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="handleRegister()">✨ Crear Cuenta</button>
+    </div>
+    <p class="auth-msg" id="authMsg"></p>
+  </div>
+</div>
+
+<!-- ==================== LOBBY SCREEN ==================== -->
+<div class="screen" id="lobbyScreen">
+  <!-- TOP NAV -->
+  <div class="top-nav">
+    <span class="nav-logo">BlockVerse</span>
+    <div class="nav-spacer"></div>
+    <div class="coin-display" id="navCoins">0</div>
+    <button class="nav-btn" onclick="openChat()" title="Chat">💬</button>
+    <div class="avatar-btn" id="navAvatar" onclick="openPanel('profilePanel')"></div>
+  </div>
+
+  <!-- LOBBY CONTENT -->
+  <div class="lobby-content" id="lobbyContent">
+    <!-- Dynamic content rendered by JS -->
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <div class="bottom-nav">
+    <button class="bottom-nav-btn active" id="bnHome" onclick="lobbyTab('home')">
+      <span class="icon">🏠</span><span class="label">Inicio</span>
+    </button>
+    <button class="bottom-nav-btn" id="bnDiscover" onclick="lobbyTab('discover')">
+      <span class="icon">🔍</span><span class="label">Descubrir</span>
+    </button>
+    <button class="bottom-nav-btn" id="bnFriends" onclick="openPanel('friendsPanel')">
+      <span class="icon">👥</span><span class="label">Amigos</span>
+    </button>
+    <button class="bottom-nav-btn" id="bnShop" onclick="openPanel('shopPanel')">
+      <span class="icon">🛒</span><span class="label">Tienda</span>
+    </button>
+    <button class="bottom-nav-btn" id="bnProfile" onclick="openPanel('profilePanel')">
+      <span class="icon">👤</span><span class="label">Perfil</span>
+    </button>
+  </div>
+</div>
+
+<!-- ==================== GAME SCREEN ==================== -->
+<div class="screen" id="gameScreen">
+  <!-- HUD -->
+  <div class="game-hud" id="gameHud">
+    <div class="hud-left">
+      <span class="hud-gamename" id="hudGameName">Sandbox</span>
+      <div class="health-bar-wrap">
+        <span>❤️</span>
+        <div class="health-bar-bg"><div class="health-bar-fill" id="healthBar" style="width:100%"></div></div>
+      </div>
+      <span class="hud-score" id="hudScore">🪙 0</span>
+    </div>
+    <div class="hud-right">
+      <button class="hud-btn" onclick="openChat()">💬</button>
+      <button class="hud-btn red" onclick="exitGame()">✕ Salir</button>
+    </div>
+  </div>
+
+  <!-- CANVAS -->
+  <canvas id="gameCanvas"></canvas>
+
+  <!-- MINIGAME OVERLAY -->
+  <div class="mg-overlay" id="mgOverlay">
+    <div class="mg-timer" id="mgTimer" style="display:none">60</div>
+    <div class="mg-objective" id="mgObjective"></div>
+  </div>
+
+  <!-- TOUCH CONTROLS -->
+  <div id="touchControls">
+    <div class="joystick-zone" id="joystickZone">
+      <div class="joystick-base"></div>
+      <div class="joystick-thumb" id="joystickThumb"></div>
+    </div>
+    <div class="action-btns">
+      <button class="action-btn btn-jump" id="btnJump">↑</button>
+      <button class="action-btn btn-interact" id="btnInteract">⚡</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PANELS ==================== -->
+
+<!-- SHOP PANEL -->
+<div class="panel" id="shopPanel">
+  <div class="panel-header">
+    <span>🛒</span>
+    <h2>Tienda</h2>
+    <div class="coin-display" id="shopCoins">0</div>
+    <button class="panel-close" onclick="closePanel('shopPanel')">✕</button>
+  </div>
+  <div class="panel-body" id="shopBody"></div>
+</div>
+
+<!-- FRIENDS PANEL -->
+<div class="panel" id="friendsPanel">
+  <div class="panel-header">
+    <span>👥</span>
+    <h2>Amigos</h2>
+    <button class="panel-close" onclick="closePanel('friendsPanel')">✕</button>
+  </div>
+  <div class="panel-body" id="friendsBody"></div>
+</div>
+
+<!-- PROFILE PANEL -->
+<div class="panel" id="profilePanel">
+  <div class="panel-header">
+    <span>👤</span>
+    <h2>Perfil</h2>
+    <button class="panel-close" onclick="closePanel('profilePanel')">✕</button>
+  </div>
+  <div class="panel-body" id="profileBody"></div>
+</div>
+
+<!-- ==================== CHAT ==================== -->
+<div id="chatPanel">
+  <div class="chat-header">
+    <span>💬 Chat Global</span>
+    <button class="chat-close" onclick="closeChat()">✕</button>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input-row">
+    <input type="text" id="chatInput" placeholder="Escribe un mensaje..." maxlength="80"
+      onkeypress="if(event.key==='Enter') sendChat()">
+    <button class="chat-send" onclick="sendChat()">➤</button>
+  </div>
+</div>
+
+<!-- ==================== GAME OVER MODAL ==================== -->
+<div class="modal-overlay" id="gameOverModal">
+  <div class="modal-box">
+    <h2 id="modalTitle">¡Juego Terminado!</h2>
+    <p id="modalDesc">Obtuviste 0 monedas</p>
+    <div class="modal-btns">
+      <button class="btn btn-primary" onclick="restartGame()">🔄 Jugar de Nuevo</button>
+      <button class="btn btn-secondary" onclick="exitGame()">🏠 Volver al Lobby</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== TRANSITION ==================== -->
+<div class="scene-transition" id="sceneTransition">
+  <div class="loading-text" id="transitionText">Cargando...</div>
+  <div class="loading-bar-bg"><div class="loading-bar-fill" id="loadingBar"></div></div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- ==================== MAIN SCRIPT ==================== -->
+<script>
+// ============================================================
+//  BLOCKVERSE — MAIN GAME LOGIC
+//  Organizado en módulos:
+//  1. Storage & Data
+//  2. Auth System
+//  3. UI / Screens
+//  4. Shop System
+//  5. Friends System
+//  6. Chat System
+//  7. Game Engine (Three-lite: Canvas 3D pseudo)
+//  8. Minigames
+//  9. Controls (keyboard + touch)
+// ============================================================
+
+/* ==================== 1. STORAGE & DATA ==================== */
+const DB = {
+  // Guardar todos los usuarios
+  getUsers() { try { return JSON.parse(localStorage.getItem('bv_users') || '{}'); } catch(e){return{};} },
+  saveUsers(u) { localStorage.setItem('bv_users', JSON.stringify(u)); },
+  // Usuario actual
+  getCurrent() { try { return JSON.parse(localStorage.getItem('bv_current') || 'null'); } catch(e){return null;} },
+  saveCurrent(u) { localStorage.setItem('bv_current', JSON.stringify(u)); },
+  clearCurrent() { localStorage.removeItem('bv_current'); },
+  // Mensajes de chat (últimos 50)
+  getChat() { try { return JSON.parse(localStorage.getItem('bv_chat') || '[]'); } catch(e){return[];} },
+  saveChat(msgs) { localStorage.setItem('bv_chat', JSON.stringify(msgs.slice(-50))); },
+};
+
+// Estado de la sesión actual
+let currentUser = null;
+
+// Datos base de la tienda
+const SHOP_ITEMS = [
+  // Colores de personaje
+  { id:'color_red',    type:'color', name:'Rojo Fuego',    price:0,   icon:'🔴', color:'#FF4757', owned:true },
+  { id:'color_blue',   type:'color', name:'Azul Océano',   price:50,  icon:'🔵', color:'#1E90FF' },
+  { id:'color_green',  type:'color', name:'Verde Bosque',  price:50,  icon:'🟢', color:'#2ED573' },
+  { id:'color_gold',   type:'color', name:'Dorado',        price:150, icon:'🟡', color:'#FFD700' },
+  { id:'color_purple', type:'color', name:'Morado Real',   price:150, icon:'🟣', color:'#A55EEA' },
+  { id:'color_black',  type:'color', name:'Negro Cosmos',  price:200, icon:'⚫', color:'#2C2C54' },
+  { id:'color_pink',   type:'color', name:'Rosa Neón',     price:100, icon:'🌸', color:'#FF6B9D' },
+  { id:'color_orange', type:'color', name:'Naranja Sol',   price:75,  icon:'🟠', color:'#FFA502' },
+  // Accesorios (cosméticos visuales)
+  { id:'hat_crown',   type:'hat', name:'Corona Real',    price:500, icon:'👑' },
+  { id:'hat_cap',     type:'hat', name:'Gorra Cool',     price:120, icon:'🧢' },
+  { id:'hat_cowboy',  type:'hat', name:'Sombrero Cowboy',price:180, icon:'🤠' },
+  { id:'hat_ninja',   type:'hat', name:'Máscara Ninja',  price:300, icon:'🥷' },
+  // Trails
+  { id:'trail_fire',  type:'trail', name:'Estela de Fuego', price:400, icon:'🔥' },
+  { id:'trail_star',  type:'trail', name:'Estela Estelar',  price:350, icon:'⭐' },
+];
+
+// Avatares disponibles
+const AVATARS = ['🦊','🐺','🐱','🐻','🐸','🦁','🐯','🦉','🦅','🐲','👾','🤖'];
+
+/* ==================== 2. AUTH SYSTEM ==================== */
+let selectedAvatar = '🦊';
+
+function switchAuthTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i) => {
+    const isActive = (i === 0 && tab === 'login') || (i === 1 && tab === 'register');
+    t.classList.toggle('active', isActive);
+  });
+  document.getElementById('loginForm').style.display = tab==='login'?'block':'none';
+  document.getElementById('registerForm').style.display = tab==='register'?'block':'none';
+  setAuthMsg('');
+}
+
+function setAuthMsg(msg, type='') {
+  const el = document.getElementById('authMsg');
+  el.textContent = msg; el.className = 'auth-msg ' + type;
+}
+
+// Hash simple y seguro que no falla con ningún carácter
+function hashPassword(pw) {
+  let h = 0;
+  for(let i=0;i<pw.length;i++) { h = Math.imul(31,h)+pw.charCodeAt(i)|0; }
+  return 'bv_' + Math.abs(h).toString(36) + pw.length;
+}
+
+function handleLogin() {
+  const username = document.getElementById('loginUser').value.trim();
+  const password = document.getElementById('loginPass').value;
+  if(!username || !password) return setAuthMsg('Completa todos los campos','error');
+  const users = DB.getUsers();
+  const user = users[username.toLowerCase()];
+  if(!user) return setAuthMsg('Usuario no encontrado','error');
+  // Soportar tanto hash nuevo como btoa antiguo
+  const validHash = user.password === hashPassword(password);
+  const validLegacy = (() => { try { return user.password === btoa(unescape(encodeURIComponent(password))); } catch(e){return false;} })();
+  if(!validHash && !validLegacy) return setAuthMsg('Contraseña incorrecta','error');
+  currentUser = {...user};
+  DB.saveCurrent(currentUser);
+  setAuthMsg('¡Bienvenido de vuelta! 🎉','success');
+  setTimeout(() => showLobby(), 600);
+}
+
+function handleRegister() {
+  const username = document.getElementById('regUser').value.trim();
+  const password = document.getElementById('regPass').value;
+  if(!username || !password) return setAuthMsg('Completa todos los campos','error');
+  if(username.length < 3) return setAuthMsg('El nombre debe tener al menos 3 caracteres','error');
+  if(password.length < 4) return setAuthMsg('La contraseña debe tener al menos 4 caracteres','error');
+  const users = DB.getUsers();
+  if(users[username.toLowerCase()]) return setAuthMsg('Ese nombre ya está en uso','error');
+  const newUser = {
+    id: Date.now(), username, password: hashPassword(password),
+    avatar: selectedAvatar, coins: 100, // Monedas iniciales
+    owned: ['color_red'], equipped: { color:'color_red', hat:null, trail:null },
+    friends: [], pendingIn: [], pendingOut: [],
+    gamesPlayed: 0, totalCoins: 100, joined: new Date().toLocaleDateString('es'),
+  };
+  users[username.toLowerCase()] = newUser;
+  DB.saveUsers(users);
+  currentUser = {...newUser};
+  DB.saveCurrent(currentUser);
+  setAuthMsg('¡Cuenta creada! 🎉','success');
+  setTimeout(() => showLobby(), 600);
+}
+
+function saveCurrentUser() {
+  // Actualiza el usuario en el storage global
+  const users = DB.getUsers();
+  users[currentUser.username.toLowerCase()] = currentUser;
+  DB.saveUsers(users);
+  DB.saveCurrent(currentUser);
+}
+
+/* ==================== 3. UI / SCREENS ==================== */
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showLobby() {
+  showScreen('lobbyScreen');
+  updateNavBar();
+  renderLobbyHome();
+}
+
+function updateNavBar() {
+  document.getElementById('navCoins').textContent = currentUser.coins;
+  document.getElementById('navAvatar').textContent = currentUser.avatar;
+}
+
+function lobbyTab(tab) {
+  ['bnHome','bnDiscover'].forEach(id => document.getElementById(id).classList.remove('active'));
+  document.getElementById(tab==='home'?'bnHome':'bnDiscover').classList.add('active');
+  if(tab==='home') renderLobbyHome();
+  else renderDiscover();
+}
+
+// Datos de minijuegos disponibles
+const GAMES_DATA = [
+  {
+    id:'sandbox', name:'Mundo Sandbox', emoji:'🏗️',
+    desc:'Explora y construye en un mundo abierto 3D.',
+    players:Math.floor(Math.random()*200+50), rating:4.8,
+    gradient:'linear-gradient(135deg,#2C3E50,#3498DB)',
+    badge:'Popular', type:'sandbox'
+  },
+  {
+    id:'parkour', name:'Parkour Extremo', emoji:'🏃',
+    desc:'Salta entre plataformas y llega al final.',
+    players:Math.floor(Math.random()*150+30), rating:4.6,
+    gradient:'linear-gradient(135deg,#E74C3C,#F39C12)',
+    badge:'Nuevo', type:'parkour'
+  },
+  {
+    id:'collect', name:'Colecta de Estrellas', emoji:'⭐',
+    desc:'Recoge tantas estrellas como puedas en 60 segundos.',
+    players:Math.floor(Math.random()*100+20), rating:4.5,
+    gradient:'linear-gradient(135deg,#27AE60,#F1C40F)',
+    badge:'Clásico', type:'collect'
+  },
+];
+
+function renderLobbyHome() {
+  const hour = new Date().getHours();
+  const greeting = hour<12?'Buenos días':hour<18?'Buenas tardes':'Buenas noches';
+  document.getElementById('lobbyContent').innerHTML = `
+    <div style="margin-bottom:24px;padding:20px;background:linear-gradient(135deg,rgba(255,71,87,0.15),rgba(255,165,2,0.1));border-radius:20px;border:1px solid rgba(255,71,87,0.2);">
+      <div style="font-size:28px;font-weight:800;">Hola, ${currentUser.username}! ${currentUser.avatar}</div>
+      <div style="color:var(--text2);margin-top:4px;">Tienes <span style="color:var(--coin);font-weight:800;">${currentUser.coins} monedas</span> para gastar 🪙</div>
+    </div>
+    <div class="section-title">🎮 Juegos <span>Populares</span></div>
+    <div class="games-grid">${GAMES_DATA.map(g=>gameCardHTML(g)).join('')}</div>
+    <div class="section-title">📊 Tu <span>Progreso</span></div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;">
+      <div style="background:var(--dark2);border-radius:16px;padding:16px;border:1px solid var(--border);">
+        <div style="font-size:32px;font-family:'Fredoka One',cursive;color:var(--primary);">${currentUser.gamesPlayed}</div>
+        <div style="color:var(--text2);font-size:13px;">Partidas jugadas</div>
+      </div>
+      <div style="background:var(--dark2);border-radius:16px;padding:16px;border:1px solid var(--border);">
+        <div style="font-size:32px;font-family:'Fredoka One',cursive;color:var(--coin);">${currentUser.totalCoins}</div>
+        <div style="color:var(--text2);font-size:13px;">Monedas ganadas</div>
+      </div>
+    </div>
+  `;
+}
+
+function renderDiscover() {
+  document.getElementById('lobbyContent').innerHTML = `
+    <div class="section-title">🔍 <span>Descubrir</span> Juegos</div>
+    <div style="margin-bottom:16px;">
+      <input type="text" placeholder="Buscar juego..." style="width:100%;padding:12px 16px;background:var(--dark2);border:1px solid var(--border);border-radius:12px;color:var(--text);font-family:'Nunito',sans-serif;font-size:14px;outline:none;">
+    </div>
+    <div class="games-grid">${GAMES_DATA.map(g=>gameCardHTML(g)).join('')}</div>
+  `;
+}
+
+function gameCardHTML(g) {
+  return `
+    <div class="game-card" onclick="launchGame('${g.id}')">
+      <div class="game-card-thumb" style="background:${g.gradient};">
+        <span style="font-size:64px;filter:drop-shadow(0 4px 8px rgba(0,0,0,0.3));">${g.emoji}</span>
+        <div class="game-card-badge">${g.badge}</div>
+      </div>
+      <div class="game-card-info">
+        <h3>${g.name}</h3>
+        <p>${g.desc}</p>
+        <div class="game-card-meta">
+          <span class="game-meta-item">👥 ${g.players}</span>
+          <span class="game-meta-item">⭐ ${g.rating}</span>
+          <button class="btn-play" onclick="event.stopPropagation();launchGame('${g.id}')">Jugar</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openPanel(id) {
+  document.getElementById(id).classList.add('open');
+  if(id==='shopPanel') renderShop();
+  if(id==='friendsPanel') renderFriends();
+  if(id==='profilePanel') renderProfile();
+}
+function closePanel(id) { document.getElementById(id).classList.remove('open'); }
+
+/* ==================== 4. SHOP SYSTEM ==================== */
+function renderShop() {
+  document.getElementById('shopCoins').textContent = currentUser.coins;
+  const cats = [
+    { label:'🎨 Colores', type:'color' },
+    { label:'🎩 Sombreros', type:'hat' },
+    { label:'✨ Estelas', type:'trail' },
+  ];
+  let html = '';
+  cats.forEach(cat => {
+    html += `<div class="section-subtitle">${cat.label}</div><div class="shop-grid">`;
+    SHOP_ITEMS.filter(i=>i.type===cat.type).forEach(item => {
+      const owned = currentUser.owned.includes(item.id) || item.owned;
+      const equipped = currentUser.equipped[item.type] === item.id;
+      html += `
+        <div class="shop-item ${owned?'owned':''} ${equipped?'equipped':''}" onclick="buyOrEquip('${item.id}')">
+          ${item.type==='color'
+            ? `<div class="item-color-preview" style="background:${item.color}"></div>`
+            : `<span class="shop-item-icon">${item.icon}</span>`}
+          <div class="shop-item-name">${item.name}</div>
+          ${equipped ? '<div class="shop-item-price" style="color:var(--secondary)">✓ Equipado</div>'
+            : owned ? '<div class="shop-item-price free">Equipar</div>'
+            : `<div class="shop-item-price">🪙 ${item.price}</div>`}
+        </div>`;
+    });
+    html += '</div>';
+  });
+  document.getElementById('shopBody').innerHTML = html;
+}
+
+function buyOrEquip(itemId) {
+  const item = SHOP_ITEMS.find(i=>i.id===itemId);
+  if(!item) return;
+  const owned = currentUser.owned.includes(item.id) || item.owned;
+  if(!owned) {
+    // Comprar
+    if(currentUser.coins < item.price) return showToast('No tienes suficientes monedas 🪙','error');
+    currentUser.coins -= item.price;
+    currentUser.owned.push(item.id);
+    showToast(`¡Compraste ${item.name}! 🎉`, 'success');
+  }
+  // Equipar
+  currentUser.equipped[item.type] = item.id;
+  saveCurrentUser();
+  updateNavBar();
+  renderShop();
+  showToast(`${item.name} equipado ✓`, 'info');
+}
+
+/* ==================== 5. FRIENDS SYSTEM ==================== */
+function renderFriends() {
+  const users = DB.getUsers();
+  let html = '';
+  // Solicitudes pendientes
+  if(currentUser.pendingIn && currentUser.pendingIn.length > 0) {
+    html += `<div class="section-subtitle">📬 Solicitudes (${currentUser.pendingIn.length})</div>`;
+    currentUser.pendingIn.forEach(uname => {
+      const u = users[uname];
+      if(!u) return;
+      html += `<div class="friend-item">
+        <div class="friend-avatar" style="background:var(--dark4);">${u.avatar}</div>
+        <div class="friend-info"><h4>${u.username}</h4><p>Quiere ser tu amigo</p></div>
+        <button class="btn-accept" onclick="acceptFriend('${uname}')">✓</button>
+        <button class="btn-reject" onclick="rejectFriend('${uname}')">✕</button>
+      </div>`;
+    });
+  }
+  // Amigos
+  html += `<div class="section-subtitle">👥 Mis Amigos (${(currentUser.friends||[]).length})</div>`;
+  if(!currentUser.friends || currentUser.friends.length === 0) {
+    html += `<p style="color:var(--text2);text-align:center;padding:20px;">Aún no tienes amigos. ¡Busca a alguien!</p>`;
+  } else {
+    currentUser.friends.forEach(uname => {
+      const u = users[uname];
+      if(!u) return;
+      html += `<div class="friend-item">
+        <div class="friend-avatar" style="background:var(--dark4);">${u.avatar}</div>
+        <div class="friend-info"><h4>${u.username}</h4><p>🪙 ${u.coins} monedas</p></div>
+        <div class="friend-status online"></div>
+      </div>`;
+    });
+  }
+  // Buscar amigos
+  html += `
+    <div class="section-subtitle">🔍 Buscar Usuario</div>
+    <div class="friends-search">
+      <input type="text" id="friendSearch" placeholder="Nombre de usuario...">
+      <button class="btn-small" onclick="searchFriend()">Buscar</button>
+    </div>
+    <div id="friendSearchResult"></div>`;
+  document.getElementById('friendsBody').innerHTML = html;
+}
+
+function searchFriend() {
+  const q = document.getElementById('friendSearch').value.trim().toLowerCase();
+  const res = document.getElementById('friendSearchResult');
+  if(!q) return;
+  if(q === currentUser.username.toLowerCase()) return res.innerHTML = '<p style="color:var(--text2);font-size:13px;">¡Eres tú mismo!</p>';
+  const users = DB.getUsers();
+  const user = users[q];
+  if(!user) return res.innerHTML = '<p style="color:var(--text2);font-size:13px;">Usuario no encontrado</p>';
+  const isFriend = (currentUser.friends||[]).includes(q);
+  const isPending = (currentUser.pendingOut||[]).includes(q);
+  res.innerHTML = `<div class="friend-item">
+    <div class="friend-avatar" style="background:var(--dark4);">${user.avatar}</div>
+    <div class="friend-info"><h4>${user.username}</h4><p>🪙 ${user.coins} monedas</p></div>
+    ${isFriend ? '<span style="color:var(--secondary);font-size:12px;font-weight:700;">✓ Amigos</span>'
+      : isPending ? '<span style="color:var(--text2);font-size:12px;">Pendiente...</span>'
+      : `<button class="btn-small" onclick="sendFriendRequest('${q}')">➕ Agregar</button>`}
+  </div>`;
+}
+
+function sendFriendRequest(uname) {
+  const users = DB.getUsers();
+  const target = users[uname];
+  if(!target) return;
+  if(!currentUser.pendingOut) currentUser.pendingOut = [];
+  if(!target.pendingIn) target.pendingIn = [];
+  currentUser.pendingOut.push(uname);
+  target.pendingIn.push(currentUser.username.toLowerCase());
+  users[uname] = target;
+  DB.saveUsers(users);
+  saveCurrentUser();
+  showToast(`Solicitud enviada a ${target.username} 📬`, 'info');
+  renderFriends();
+}
+
+function acceptFriend(uname) {
+  if(!currentUser.friends) currentUser.friends = [];
+  currentUser.friends.push(uname);
+  currentUser.pendingIn = currentUser.pendingIn.filter(u=>u!==uname);
+  // Agregar también al otro
+  const users = DB.getUsers();
+  const other = users[uname];
+  if(other) {
+    if(!other.friends) other.friends = [];
+    other.friends.push(currentUser.username.toLowerCase());
+    if(other.pendingOut) other.pendingOut = other.pendingOut.filter(u=>u!==currentUser.username.toLowerCase());
+    users[uname] = other;
+  }
+  DB.saveUsers(users);
+  saveCurrentUser();
+  showToast(`¡Ahora son amigos! 🎉`, 'success');
+  renderFriends();
+}
+
+function rejectFriend(uname) {
+  currentUser.pendingIn = currentUser.pendingIn.filter(u=>u!==uname);
+  const users = DB.getUsers();
+  const other = users[uname];
+  if(other && other.pendingOut) {
+    other.pendingOut = other.pendingOut.filter(u=>u!==currentUser.username.toLowerCase());
+    users[uname] = other;
+  }
+  DB.saveUsers(users);
+  saveCurrentUser();
+  renderFriends();
+}
+
+/* ==================== PROFILE ==================== */
+function renderProfile() {
+  const equippedColor = SHOP_ITEMS.find(i=>i.id===currentUser.equipped?.color);
+  document.getElementById('profileBody').innerHTML = `
+    <div class="profile-hero">
+      <div class="profile-avatar-big" style="background:${equippedColor?.color||'#FF4757'}22;border-color:${equippedColor?.color||'#FF4757'};">${currentUser.avatar}</div>
+      <div class="profile-name">${currentUser.username}</div>
+      <div style="color:var(--text2);font-size:13px;margin-top:4px;">Miembro desde ${currentUser.joined||'hoy'}</div>
+      <div class="profile-stats">
+        <div class="stat-box"><div class="val">${currentUser.gamesPlayed}</div><div class="lbl">Partidas</div></div>
+        <div class="stat-box"><div class="val">${currentUser.coins}</div><div class="lbl">Monedas</div></div>
+        <div class="stat-box"><div class="val">${(currentUser.friends||[]).length}</div><div class="lbl">Amigos</div></div>
+      </div>
+    </div>
+    <div class="section-subtitle">🎭 Mi Avatar</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px;" id="avatarChanger">
+      ${AVATARS.map(a=>`<div onclick="changeAvatar('${a}')" style="width:48px;height:48px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;cursor:pointer;background:${a===currentUser.avatar?'var(--primary)':'var(--dark3)'};border:2px solid ${a===currentUser.avatar?'var(--primary)':'transparent'};transition:all 0.2s;">${a}</div>`).join('')}
+    </div>
+    <button class="btn btn-logout" onclick="logout()">🚪 Cerrar Sesión</button>
+  `;
+}
+
+function changeAvatar(a) {
+  currentUser.avatar = a;
+  saveCurrentUser();
+  updateNavBar();
+  renderProfile();
+  showToast('Avatar actualizado ✓','success');
+}
+
+function logout() {
+  currentUser = null;
+  DB.clearCurrent();
+  showScreen('authScreen');
+  closePanel('profilePanel');
+}
+
+/* ==================== 6. CHAT SYSTEM ==================== */
+function openChat() {
+  document.getElementById('chatPanel').classList.add('open');
+  renderChatMessages();
+}
+function closeChat() { document.getElementById('chatPanel').classList.remove('open'); }
+
+function renderChatMessages() {
+  const msgs = DB.getChat();
+  const el = document.getElementById('chatMessages');
+  el.innerHTML = msgs.map(m=>`
+    <div class="chat-msg">
+      <span class="chat-msg-name">${m.avatar} ${m.user}:</span>
+      <span class="chat-msg-text">${escapeHTML(m.text)}</span>
+    </div>`).join('') || '<p style="color:var(--text2);font-size:13px;text-align:center;">Sé el primero en escribir algo!</p>';
+  el.scrollTop = el.scrollHeight;
+}
+
+function sendChat() {
+  const input = document.getElementById('chatInput');
+  const text = input.value.trim();
+  if(!text || !currentUser) return;
+  const msgs = DB.getChat();
+  msgs.push({ user:currentUser.username, avatar:currentUser.avatar, text, time:Date.now() });
+  DB.saveChat(msgs);
+  input.value = '';
+  renderChatMessages();
+}
+
+function escapeHTML(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+/* ==================== 7. TOAST ==================== */
+let toastTimeout;
+function showToast(msg, type='info') {
+  clearTimeout(toastTimeout);
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  toastTimeout = setTimeout(()=> t.classList.remove('show'), 3000);
+}
+
+/* ==================== 8. GAME LAUNCH ==================== */
+let currentGame = null;
+let gameLoop = null;
+let gameState = {};
+
+function launchGame(gameId) {
+  const trans = document.getElementById('sceneTransition');
+  const bar = document.getElementById('loadingBar');
+  const txt = document.getElementById('transitionText');
+  const g = GAMES_DATA.find(g=>g.id===gameId);
+  txt.textContent = `Cargando ${g?.name||'Juego'}...`;
+  trans.classList.add('show');
+  bar.style.width='0%';
+  setTimeout(()=> bar.style.width='100%', 50);
+  setTimeout(()=>{
+    trans.classList.remove('show');
+    bar.style.width='0%';
+    currentGame = gameId;
+    showScreen('gameScreen');
+    initGame(gameId);
+  }, 2000);
+}
+
+function exitGame() {
+  cancelAnimationFrame(gameLoop);
+  gameLoop = null;
+  document.getElementById('gameOverModal').classList.remove('open');
+  document.getElementById('mgTimer').style.display='none';
+  showToast(`Volviste al Lobby 🏠`,'info');
+  showLobby();
+  currentUser.gamesPlayed++;
+  saveCurrentUser();
+  updateNavBar();
+}
+
+/* ==================== 9. GAME ENGINE (Canvas 3D Pseudo) ==================== */
+// Motor de juego simple con perspectiva isométrica / pseudo-3D
+const G = {
+  canvas:null, ctx:null,
+  W:0, H:0,
+  camera:{ x:0, y:0, z:8, angle:0.5, pitch:0.4 },
+  player:{
+    x:0, y:0, z:0,
+    vx:0, vy:0, vz:0,
+    onGround:false, health:100, score:0,
+    size:0.5, hat:null, color:'#FF4757', trail:[],
+  },
+  world:{ blocks:[], coins:[], stars:[], platforms:[], items:[] },
+  keys:{}, input:{ dx:0, dy:0, jump:false, interact:false },
+  time:0, gameType:'sandbox',
+  timer:60, timerActive:false, timerInterval:null,
+};
+
+function initGame(type) {
+  G.canvas = document.getElementById('gameCanvas');
+  G.ctx = G.canvas.getContext('2d');
+  resizeCanvas();
+  window.addEventListener('resize', resizeCanvas);
+
+  G.gameType = type;
+  document.getElementById('hudGameName').textContent = GAMES_DATA.find(g=>g.id===type)?.name||'Juego';
+
+  // Resetear player
+  const col = SHOP_ITEMS.find(i=>i.id===currentUser.equipped?.color);
+  G.player = { x:0, y:0, z:0, vx:0, vy:0, vz:0, onGround:false, health:100, score:0, size:0.5, trail:[], color:col?.color||'#FF4757', avatar:currentUser.avatar };
+  G.time = 0;
+
+  // Construir mundo según tipo
+  buildWorld(type);
+
+  // Iniciar bucle
+  if(gameLoop) cancelAnimationFrame(gameLoop);
+  gameLoop = requestAnimationFrame(gameFrame);
+
+  // Timer para minijuegos
+  if(type!=='sandbox') {
+    G.timer=60; G.timerActive=true;
+    document.getElementById('mgTimer').style.display='block';
+    document.getElementById('mgTimer').textContent='60';
+    if(G.timerInterval) clearInterval(G.timerInterval);
+    G.timerInterval = setInterval(tickTimer, 1000);
+  } else {
+    document.getElementById('mgTimer').style.display='none';
+    G.timerActive=false;
+  }
+  document.getElementById('mgObjective').textContent = getObjective(type);
+}
+
+function getObjective(type) {
+  if(type==='sandbox') return '🏗️ Explora el mundo libre';
+  if(type==='parkour') return '🏃 Llega al final — Toca los bloques rojos';
+  if(type==='collect') return '⭐ Recoge estrellas en 60 segundos';
+  return '';
+}
+
+function tickTimer() {
+  if(!G.timerActive) return;
+  G.timer--;
+  document.getElementById('mgTimer').textContent = G.timer;
+  if(G.timer <= 0) {
+    G.timerActive = false;
+    clearInterval(G.timerInterval);
+    setTimeout(()=> endGame(), 500);
+  }
+}
+
+function buildWorld(type) {
+  G.world = { blocks:[], coins:[], stars:[], platforms:[], items:[] };
+
+  if(type==='sandbox') {
+    // Mundo abierto con bloques coloridos
+    const colors = ['#3498DB','#E74C3C','#2ECC71','#9B59B6','#F39C12','#1ABC9C','#E67E22','#E91E63'];
+    // Terreno base
+    for(let x=-8;x<=8;x++) for(let z=-8;z<=8;z++) {
+      const noise = Math.sin(x*0.5)*Math.cos(z*0.5)*0.5;
+      const h = Math.floor(noise+0.5);
+      G.world.blocks.push({ x, y:-1+h, z, color:'#4A7C59', type:'ground' });
+    }
+    // Edificios random
+    for(let i=0;i<12;i++) {
+      const bx=Math.floor(Math.random()*14-7), bz=Math.floor(Math.random()*14-7);
+      const height=Math.floor(Math.random()*4+1);
+      const c=colors[Math.floor(Math.random()*colors.length)];
+      for(let h=0;h<height;h++) G.world.blocks.push({x:bx,y:h,z:bz,color:c,type:'building'});
+    }
+    // Monedas flotantes
+    for(let i=0;i<20;i++) G.world.coins.push({
+      x:Math.random()*14-7, y:0.5+Math.random()*2, z:Math.random()*14-7, collected:false, bob:Math.random()*Math.PI*2
+    });
+
+  } else if(type==='parkour') {
+    // Plataformas de parkour
+    const platforms = [
+      {x:0,y:0,z:0},{x:2,y:0.5,z:-2},{x:4,y:1,z:-1},{x:6,y:1.5,z:-3},
+      {x:8,y:2,z:-2},{x:10,y:2.5,z:-4},{x:12,y:3,z:-3},{x:14,y:3.5,z:-5},
+      {x:16,y:4,z:-4},{x:18,y:4.5,z:-6},{x:20,y:5,z:-5},{x:22,y:5.5,z:-7},
+      {x:24,y:6,z:-6, type:'finish'}
+    ];
+    platforms.forEach((p,i)=>{
+      const isFinish = p.type==='finish';
+      G.world.platforms.push({...p, color: isFinish?'#FF4757':'#3498DB', id:i, reached:false});
+    });
+    // Suelo
+    for(let x=-2;x<=26;x++) for(let z=-10;z<=2;z++) G.world.blocks.push({x,y:-2,z,color:'#2C3E50',type:'ground'});
+
+  } else if(type==='collect') {
+    // Mundo de colección de estrellas
+    for(let x=-10;x<=10;x+=2) for(let z=-10;z<=10;z+=2) G.world.blocks.push({x,y:-1,z,color:'#8E44AD',type:'ground'});
+    // Obstáculos
+    for(let i=0;i<15;i++) {
+      const bx=Math.floor(Math.random()*18-9), bz=Math.floor(Math.random()*18-9);
+      G.world.blocks.push({x:bx,y:0,z:bz,color:'#E74C3C',type:'wall'});
+    }
+    // Muchas estrellas
+    for(let i=0;i<30;i++) G.world.stars.push({
+      x:Math.random()*18-9, y:0.5+Math.random()*1.5, z:Math.random()*18-9, collected:false, bob:Math.random()*Math.PI*2
+    });
+  }
+}
+
+function resizeCanvas() {
+  G.canvas.width = window.innerWidth;
+  G.canvas.height = window.innerHeight;
+  G.W = G.canvas.width; G.H = G.canvas.height;
+}
+
+/* ===== ISOMETRIC PROJECTION ===== */
+// Convierte coordenadas 3D del mundo a 2D de pantalla
+function project(wx, wy, wz) {
+  // Ajustar por cámara
+  const rx = wx - G.camera.x;
+  const rz = wz - G.camera.z + 5;
+  const ry = wy - G.camera.y;
+  // Rotación horizontal
+  const a = G.camera.angle;
+  const cx = rx * Math.cos(a) - rz * Math.sin(a);
+  const cz = rx * Math.sin(a) + rz * Math.cos(a);
+  // Perspectiva
+  const fov = 600;
+  const depth = cz + 12;
+  if(depth <= 0.1) return null;
+  const scale = fov / depth;
+  const px = G.W/2 + cx * scale;
+  const py = G.H/2 - ry * scale * G.camera.pitch * 2 + cz * scale * 0.3;
+  return {x:px, y:py, s:scale, depth};
+}
+
+/* ===== DRAW BLOCK ===== */
+function drawBlock(bx, by, bz, color, size=1, alpha=1) {
+  const top = project(bx, by+size, bz);
+  const tl  = project(bx, by+size, bz+size);
+  const tr  = project(bx+size, by+size, bz);
+  const bot = project(bx, by, bz);
+  const bl  = project(bx, by, bz+size);
+  const br  = project(bx+size, by, bz);
+  const trb = project(bx+size, by, bz+size);
+  const tr2 = project(bx+size, by+size, bz+size);
+  if(!top||!tl||!tr||!bot||!bl||!br||!trb||!tr2) return;
+
+  const ctx = G.ctx;
+  ctx.globalAlpha = alpha;
+
+  // Top face
+  ctx.beginPath();
+  ctx.moveTo(top.x,top.y); ctx.lineTo(tl.x,tl.y);
+  ctx.lineTo(tr2.x,tr2.y); ctx.lineTo(tr.x,tr.y);
+  ctx.closePath();
+  ctx.fillStyle = lightenColor(color, 30);
+  ctx.fill(); ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.5; ctx.stroke();
+
+  // Left face
+  ctx.beginPath();
+  ctx.moveTo(top.x,top.y); ctx.lineTo(tl.x,tl.y);
+  ctx.lineTo(bl.x,bl.y); ctx.lineTo(bot.x,bot.y);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill(); ctx.stroke();
+
+  // Right face
+  ctx.beginPath();
+  ctx.moveTo(top.x,top.y); ctx.lineTo(tr.x,tr.y);
+  ctx.lineTo(br.x,br.y); ctx.lineTo(bot.x,bot.y);
+  ctx.closePath();
+  ctx.fillStyle = darkenColor(color, 20);
+  ctx.fill(); ctx.stroke();
+
+  ctx.globalAlpha = 1;
+}
+
+function lightenColor(c, amt) {
+  try {
+    const r=parseInt(c.slice(1,3),16), g=parseInt(c.slice(3,5),16), b=parseInt(c.slice(5,7),16);
+    return `rgb(${Math.min(255,r+amt)},${Math.min(255,g+amt)},${Math.min(255,b+amt)})`;
+  } catch(e){return c;}
+}
+function darkenColor(c, amt) {
+  try {
+    const r=parseInt(c.slice(1,3),16), g=parseInt(c.slice(3,5),16), b=parseInt(c.slice(5,7),16);
+    return `rgb(${Math.max(0,r-amt)},${Math.max(0,g-amt)},${Math.max(0,b-amt)})`;
+  } catch(e){return c;}
+}
+
+/* ===== DRAW CHARACTER ===== */
+function drawPlayer(px, py, pz, size, color, avatar, hat) {
+  const base = project(px-size/2, py, pz-size/2);
+  if(!base || base.depth > 30) return;
+  const s = base.s * size;
+
+  const ctx = G.ctx;
+  const bx = base.x, by = base.y;
+
+  // Cuerpo (bloque del personaje)
+  drawBlock(px-size/2, py, pz-size/2, color, size, 1);
+
+  // Cara con emoji
+  const faceProj = project(px-size/2, py+size*0.8, pz-size/2-0.01);
+  if(faceProj) {
+    ctx.font = `${Math.max(12, s*0.9)}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(avatar, faceProj.x, faceProj.y);
+  }
+
+  // Sombra bajo el jugador
+  const shadowP = project(px, py-0.01, pz);
+  if(shadowP) {
+    ctx.beginPath();
+    ctx.ellipse(shadowP.x, shadowP.y, s*0.6, s*0.2, 0, 0, Math.PI*2);
+    ctx.fillStyle='rgba(0,0,0,0.3)'; ctx.fill();
+  }
+}
+
+/* ===== GAME LOOP ===== */
+function gameFrame(ts) {
+  gameLoop = requestAnimationFrame(gameFrame);
+  G.time += 0.016;
+
+  updatePlayer();
+  updateCamera();
+  checkCollectibles();
+
+  G.ctx.clearRect(0,0,G.W,G.H);
+  drawSky();
+  drawWorld();
+  drawCollectibles();
+  drawPlayerChar();
+  updateHUD();
+}
+
+function drawSky() {
+  const ctx = G.ctx;
+  const grad = ctx.createLinearGradient(0,0,0,G.H);
+  if(G.gameType==='sandbox') {
+    grad.addColorStop(0,'#0D0D1A'); grad.addColorStop(1,'#1A1A3E');
+  } else if(G.gameType==='parkour') {
+    grad.addColorStop(0,'#1A0A2E'); grad.addColorStop(1,'#2D1B69');
+  } else {
+    grad.addColorStop(0,'#0D1A0D'); grad.addColorStop(1,'#1A2E1A');
+  }
+  ctx.fillStyle = grad; ctx.fillRect(0,0,G.W,G.H);
+
+  // Estrellas de fondo
+  ctx.fillStyle='rgba(255,255,255,0.6)';
+  for(let i=0;i<50;i++) {
+    const sx=(Math.sin(i*127.1)*0.5+0.5)*G.W;
+    const sy=(Math.sin(i*311.7)*0.5+0.5)*G.H*0.5;
+    const sr=Math.sin(G.time+i)*0.5+1;
+    ctx.beginPath(); ctx.arc(sx,sy,sr,0,Math.PI*2); ctx.fill();
+  }
+}
+
+function drawWorld() {
+  // Ordenar bloques por profundidad para pintor's algorithm
+  const sorted = [...G.world.blocks, ...G.world.platforms].sort((a,b)=>{
+    const da=(a.x-G.camera.x)**2+(a.z-G.camera.z)**2;
+    const db=(b.x-G.camera.x)**2+(b.z-G.camera.z)**2;
+    return db-da;
+  });
+  sorted.forEach(b=>{
+    const col = b.color || '#4A7C59';
+    drawBlock(b.x, b.y, b.z, col, 1);
+    // Grid line en el suelo
+    if(b.type==='ground') {
+      const p = project(b.x+0.5, b.y+1.01, b.z+0.5);
+    }
+  });
+}
+
+function drawCollectibles() {
+  const ctx = G.ctx;
+  // Monedas (sandbox)
+  G.world.coins.forEach(c=>{
+    if(c.collected) return;
+    c.bob = (c.bob||0)+0.05;
+    const p = project(c.x, c.y+Math.sin(c.bob)*0.2, c.z);
+    if(!p) return;
+    const s = Math.max(10, p.s*0.5);
+    ctx.beginPath(); ctx.arc(p.x,p.y,s,0,Math.PI*2);
+    const g=ctx.createRadialGradient(p.x,p.y,0,p.x,p.y,s);
+    g.addColorStop(0,'#FFE066'); g.addColorStop(1,'#FFD700');
+    ctx.fillStyle=g; ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.font=`${s*0.9}px serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle'; ctx.fillText('🪙',p.x,p.y);
+  });
+  // Estrellas (collect)
+  G.world.stars.forEach(s=>{
+    if(s.collected) return;
+    s.bob=(s.bob||0)+0.06;
+    const p=project(s.x,s.y+Math.sin(s.bob)*0.3,s.z);
+    if(!p) return;
+    const sz=Math.max(12,p.s*0.6);
+    ctx.font=`${sz*1.5}px serif`; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('⭐',p.x,p.y);
+  });
+  // Flag de llegada (parkour)
+  if(G.gameType==='parkour') {
+    const last = G.world.platforms[G.world.platforms.length-1];
+    if(last) {
+      const p=project(last.x+0.5,last.y+2,last.z+0.5);
+      if(p) { ctx.font=`${Math.max(20,p.s)}px serif`; ctx.textAlign='center'; ctx.fillText('🚩',p.x,p.y); }
+    }
+  }
+}
+
+function drawPlayerChar() {
+  // Trail
+  if(currentUser.equipped?.trail) {
+    G.player.trail.push({x:G.player.x, y:G.player.y, z:G.player.z, t:G.time});
+    G.player.trail = G.player.trail.filter(t=> G.time-t.t < 0.5);
+    G.player.trail.forEach((t,i)=>{
+      const alpha=(i/G.player.trail.length)*0.4;
+      const p=project(t.x,t.y+0.25,t.z);
+      if(p){
+        G.ctx.beginPath(); G.ctx.arc(p.x,p.y,p.s*0.2,0,Math.PI*2);
+        G.ctx.fillStyle=`rgba(255,165,0,${alpha})`; G.ctx.fill();
+      }
+    });
+  }
+  drawPlayer(G.player.x, G.player.y, G.player.z, G.player.size, G.player.color, G.player.avatar||'😊', currentUser.equipped?.hat);
+}
+
+/* ===== PLAYER PHYSICS ===== */
+function updatePlayer() {
+  const p = G.player;
+  const speed = 0.08;
+  const gravity = -0.012;
+  const jumpForce = 0.22;
+
+  // Movimiento horizontal (teclado o joystick)
+  let dx = G.input.dx;
+  let dz = G.input.dy;
+  if(G.keys['w']||G.keys['ArrowUp']) dz=-1;
+  if(G.keys['s']||G.keys['ArrowDown']) dz=1;
+  if(G.keys['a']||G.keys['ArrowLeft']) dx=-1;
+  if(G.keys['d']||G.keys['ArrowRight']) dx=1;
+
+  // Normalizar diagonal
+  const len=Math.sqrt(dx*dx+dz*dz);
+  if(len>1){dx/=len;dz/=len;}
+
+  // Rotar movimiento según ángulo de cámara
+  const a=G.camera.angle;
+  const rdx=dx*Math.cos(-a)-dz*Math.sin(-a);
+  const rdz=dx*Math.sin(-a)+dz*Math.cos(-a);
+
+  p.vx += rdx*speed;
+  p.vz += rdz*speed;
+
+  // Fricción
+  p.vx *= 0.75; p.vz *= 0.75;
+
+  // Gravedad
+  p.vy += gravity;
+
+  // Saltar
+  if((G.input.jump || G.keys[' ']) && p.onGround) {
+    p.vy = jumpForce; p.onGround=false;
+    G.input.jump=false;
+  }
+
+  // Aplicar velocidades
+  p.x += p.vx; p.y += p.vy; p.z += p.vz;
+
+  // Colisión con el suelo y bloques
+  p.onGround=false;
+  let groundY = -1;
+
+  [...G.world.blocks, ...G.world.platforms].forEach(b=>{
+    const bSize=1;
+    if(p.x+p.size>b.x && p.x<b.x+bSize && p.z+p.size>b.z && p.z<b.z+bSize) {
+      if(p.y >= b.y+bSize-0.1 && p.y < b.y+bSize+0.5 && p.vy<=0) {
+        if(b.y+bSize > groundY) { groundY=b.y+bSize; }
+      }
+    }
+  });
+
+  if(p.y <= groundY) {
+    p.y = groundY; p.vy=0; p.onGround=true;
+  }
+
+  // Caer al vacío
+  if(p.y < -10) {
+    p.y=2; p.x=0; p.z=0; p.vx=0; p.vy=0; p.vz=0;
+    p.health = Math.max(0, p.health-20);
+    updateHealthBar();
+    showToast('¡Caíste! -20 HP ❤️','error');
+  }
+
+  // Límites del mundo
+  p.x = Math.max(-15,Math.min(25,p.x));
+  p.z = Math.max(-15,Math.min(10,p.z));
+}
+
+function updateCamera() {
+  // Cámara sigue al jugador suavemente
+  G.camera.x += (G.player.x - G.camera.x) * 0.1;
+  G.camera.z += (G.player.z - G.camera.z) * 0.1;
+  G.camera.y += (G.player.y - 1 - G.camera.y) * 0.1;
+}
+
+function checkCollectibles() {
+  const p = G.player;
+  const reach = 1.2;
+
+  // Monedas
+  G.world.coins.forEach(c=>{
+    if(c.collected) return;
+    const dist=Math.sqrt((p.x-c.x)**2+(p.y-c.y)**2+(p.z-c.z)**2);
+    if(dist < reach) {
+      c.collected=true; p.score+=10;
+      spawnScorePopup(c.x,c.y,c.z,'+10');
+    }
+  });
+
+  // Estrellas
+  G.world.stars.forEach(s=>{
+    if(s.collected) return;
+    const dist=Math.sqrt((p.x-s.x)**2+(p.y-s.y)**2+(p.z-s.z)**2);
+    if(dist < reach) {
+      s.collected=true; p.score+=25;
+      spawnScorePopup(s.x,s.y,s.z,'+25⭐');
+    }
+  });
+
+  // Parkour — plataformas especiales
+  if(G.gameType==='parkour') {
+    const last=G.world.platforms[G.world.platforms.length-1];
+    if(last && !last.reached) {
+      const dist=Math.sqrt((p.x-last.x)**2+(p.z-last.z)**2);
+      if(dist<2) { last.reached=true; endGame(true); }
+    }
+  }
+}
+
+function spawnScorePopup(wx, wy, wz, text) {
+  const p = project(wx, wy+1, wz);
+  if(!p) return;
+  const el=document.createElement('div');
+  el.className='mg-score-popup'; el.textContent=text;
+  el.style.left=p.x+'px'; el.style.top=p.y+'px';
+  document.getElementById('mgOverlay').appendChild(el);
+  setTimeout(()=>el.remove(), 1500);
+}
+
+function updateHUD() {
+  document.getElementById('hudScore').textContent = `🪙 ${G.player.score}`;
+}
+
+function updateHealthBar() {
+  document.getElementById('healthBar').style.width = G.player.health+'%';
+  if(G.player.health <= 0) endGame(false);
+}
+
+function endGame(win=false) {
+  G.timerActive=false;
+  clearInterval(G.timerInterval);
+  cancelAnimationFrame(gameLoop);
+  gameLoop=null;
+
+  const earned = G.player.score;
+  currentUser.coins += earned;
+  currentUser.totalCoins += earned;
+  currentUser.gamesPlayed++;
+  saveCurrentUser();
+
+  document.getElementById('modalTitle').textContent = win?'¡Victoria! 🏆':'⏰ Tiempo Agotado';
+  document.getElementById('modalDesc').textContent = `Obtuviste ${earned} monedas 🪙`;
+  document.getElementById('gameOverModal').classList.add('open');
+}
+
+function restartGame() {
+  document.getElementById('gameOverModal').classList.remove('open');
+  initGame(currentGame);
+}
+
+/* ==================== 10. CONTROLS ==================== */
+// Teclado
+window.addEventListener('keydown', e=>{ G.keys[e.key]=true; if(e.key===' ') e.preventDefault(); });
+window.addEventListener('keyup',  e=>{ G.keys[e.key]=false; });
+
+// Joystick táctil
+(function setupJoystick() {
+  const zone = document.getElementById('joystickZone');
+  const thumb = document.getElementById('joystickThumb');
+  const R = 35; // radio máximo del thumb
+  let active=false, origin={x:0,y:0}, tid=null;
+
+  function move(cx,cy) {
+    const dx=cx-origin.x, dy=cy-origin.y;
+    const dist=Math.sqrt(dx*dx+dy*dy);
+    const clamp=Math.min(dist,R);
+    const nx=dx/Math.max(dist,1), ny=dy/Math.max(dist,1);
+    thumb.style.transform=`translate(calc(-50% + ${nx*clamp}px), calc(-50% + ${ny*clamp}px))`;
+    G.input.dx=nx*(clamp/R); G.input.dy=ny*(clamp/R);
+  }
+
+  zone.addEventListener('touchstart',e=>{
+    const t=e.touches[0]; tid=t.identifier;
+    const r=zone.getBoundingClientRect();
+    origin={x:r.left+r.width/2,y:r.top+r.height/2};
+    active=true; move(t.clientX,t.clientY);
+  },{passive:true});
+
+  window.addEventListener('touchmove',e=>{
+    if(!active) return;
+    const t=[...e.touches].find(t=>t.identifier===tid);
+    if(t) move(t.clientX,t.clientY);
+  },{passive:true});
+
+  window.addEventListener('touchend',e=>{
+    if(!active) return;
+    const t=[...e.changedTouches].find(t=>t.identifier===tid);
+    if(t){active=false; G.input.dx=0; G.input.dy=0; thumb.style.transform='translate(-50%,-50%)';}
+  });
+})();
+
+// Botones de acción
+document.getElementById('btnJump').addEventListener('touchstart', e=>{ G.input.jump=true; e.preventDefault(); },{passive:false});
+document.getElementById('btnJump').addEventListener('touchend',  ()=>{ G.input.jump=false; });
+document.getElementById('btnInteract').addEventListener('touchstart', e=>{ G.input.interact=true; e.preventDefault(); },{passive:false});
+document.getElementById('btnInteract').addEventListener('touchend', ()=>{ G.input.interact=false; });
+
+/* ==================== INIT ==================== */
+// Floating blocks decoration
+(function createFloatingBlocks() {
+  const container=document.getElementById('floatingBlocks');
+  const colors=['#FF4757','#2ED573','#FFA502','#1E90FF','#A55EEA'];
+  for(let i=0;i<20;i++){
+    const el=document.createElement('div');
+    el.className='float-block';
+    const size=Math.random()*30+15;
+    el.style.cssText=`
+      width:${size}px;height:${size}px;
+      left:${Math.random()*100}%;
+      background:${colors[Math.floor(Math.random()*colors.length)]};
+      animation-delay:${Math.random()*8}s;
+      animation-duration:${6+Math.random()*8}s;
+      border-radius:${4+Math.random()*6}px;
+    `;
+    container.appendChild(el);
+  }
+})();
+
+// Avatar picker en registro
+(function setupAvatarPicker(){
+  const el=document.getElementById('avatarPicker');
+  AVATARS.forEach(a=>{
+    const btn=document.createElement('div');
+    btn.style.cssText='width:44px;height:44px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:24px;cursor:pointer;background:var(--dark3);border:2px solid transparent;transition:all 0.2s;';
+    btn.textContent=a;
+    if(a==='🦊'){btn.style.borderColor='var(--primary)';btn.style.background='var(--dark4)';}
+    btn.onclick=()=>{
+      selectedAvatar=a;
+      el.querySelectorAll('div').forEach(b=>{b.style.borderColor='transparent';b.style.background='var(--dark3)';});
+      btn.style.borderColor='var(--primary)';btn.style.background='var(--dark4)';
+    };
+    el.appendChild(btn);
+  });
+})();
+
+// Auto-login si hay sesión guardada
+(function autoLogin(){
+  const saved=DB.getCurrent();
+  if(saved){
+    currentUser={...saved};
+    showLobby();
+  }
+})();
+</script>
+</body>
+</html>
